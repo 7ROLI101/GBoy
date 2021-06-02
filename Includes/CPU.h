@@ -1,13 +1,17 @@
 /*
 HELPFUL LINKS:
 https://gbdev.io/pandocs/
+https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
+
 */
 #include <cstdint>
+#include <array>
 using namespace std;
+
 class CPU
 {
-    
-/*
+    public:
+            /*
     CPU REGISTERS
     There are two 16 bit registers, SP & PC (the stack pointer and program counter, respectively), and 
     there are 8 8-bit registers (A,B,C,D,E,F,H and L). However, some instructions can allow you to use
@@ -36,10 +40,30 @@ Bit 4 of the F register -> C, or the Carry Flag
 
 -> The other registers are general purpose register used to store data.
 
-In this case, I will treat them as their original 8 and 16 bits to keep the implementation true.
-It could be potentially easier to just make them all 16 bits.
 */
-uint8_t A,B,C,D,E,F,H,L;
-uint16_t SP,PC;
+uint16_t AF, BC, DE, HL, SP, PC;
 
+// here are the flags that are being used in the flag register
+enum FLAGS
+{
+    ZERO_FLAG = (1<<7), //zero bit
+    SUBTRACTION_FLAG = (1<<6), //subraction bit (BCD)
+    HALF_CARRY_FLAG = (1<<5), //half carry bit (BCD)
+    CARRY_FLAG = (1<<4) //carry bit
+};
+
+void emulate_one_cycle();   //used to emulate one CPU cycle
+CPU();                      //constructor used to initialize an object of the CPU class
+~CPU();                     //destructor used to destroy an object of the CPU class
+
+//dummy memory array, will replace later
+array<uint16_t,0xFFFF> memory;
+    private:
+        unsigned int cycles;     //count the number of cycles the CPU has run for
+        void fetch();   //performs the fetching action of the CPU 
+        void decode();  //performs the decoding action of the CPU
+        void execute(); //performs the execution action of the CPU
+        uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus
+        void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
+        uint16_t opcode;     //stores the current instruction that is to be executed
 };
