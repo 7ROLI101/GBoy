@@ -11,7 +11,7 @@ using namespace std;
 class CPU
 {
     public:
-            /*
+        /*
     CPU REGISTERS
     There are two 16 bit registers, SP & PC (the stack pointer and program counter, respectively), and 
     there are 8 8-bit registers (A,B,C,D,E,F,H and L). However, some instructions can allow you to use
@@ -55,15 +55,13 @@ enum FLAGS
 void emulate_one_cycle();   //used to emulate one CPU cycle
 CPU();                      //constructor used to initialize an object of the CPU class
 ~CPU();                     //destructor used to destroy an object of the CPU class
-
+void reset();               //used to reset the CPU if needed 
 //dummy memory array, will replace later
-array<uint16_t,0xFFFF> memory;
+array<uint8_t,0xFFFF> memory;
+
     private:
+        bool CPU_running;   //meant to be used by the special commands like STOP and HALT
         unsigned int cycles;     //count the number of cycles the CPU has run for
-        void fetch();   //performs the fetching action of the CPU 
-        void decode();  //performs the decoding action of the CPU
-        void execute(); //performs the execution action of the CPU
-        uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus
-        void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
-        uint16_t opcode;     //stores the current instruction that is to be executed
+        uint8_t read(uint8_t address);    //meant to read memory and other peripherals on the bus
+        void write(uint8_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
 };
