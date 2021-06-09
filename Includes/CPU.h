@@ -8,6 +8,23 @@ https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
 #include <array>
 using namespace std;
 
+// here are the flags that are being used in the flag register
+enum SET_FLAGS
+{
+    SET_ZERO_FLAG = (1<<7), //zero bit
+    SET_SUBTRACTION_FLAG = (1<<6), //subraction bit (BCD)
+    SET_HALF_CARRY_FLAG = (1<<5), //half carry bit (BCD)
+    SET_CARRY_FLAG = (1<<4) //carry bit
+};
+
+enum CLR_FLAGS
+{
+    CLR_ZERO_FLAG = 0x7F, //zero bit
+    CLR_SUBTRACTION_FLAG = 0xBF, //subraction bit (BCD)
+    CLR_HALF_CARRY_FLAG = 0xDF, //half carry bit (BCD)
+    CLR_CARRY_FLAG = 0xEF //carry bit
+};
+
 class CPU
 {
     public:
@@ -39,18 +56,36 @@ Bit 5 of the F register -> H, or the Half Carry Flag (BCD)
 Bit 4 of the F register -> C, or the Carry Flag
 
 -> The other registers are general purpose register used to store data.
-
 */
-uint16_t AF, BC, DE, HL, SP, PC;
 
-// here are the flags that are being used in the flag register
-enum FLAGS
+uint16_t SP, PC;
+uint8_t A,B,C,D,E,F,H,L;
+class Register
 {
-    ZERO_FLAG = (1<<7), //zero bit
-    SUBTRACTION_FLAG = (1<<6), //subraction bit (BCD)
-    HALF_CARRY_FLAG = (1<<5), //half carry bit (BCD)
-    CARRY_FLAG = (1<<4) //carry bit
+    public:
+        uint16_t combined_register;
+        uint8_t high_byte;
+        uint8_t low_byte;
+
+        void set_register_combined(uint16_t value)
+        {
+            combined_register = value;
+            high_byte = (value&0xFF00)>>8;
+            low_byte = (value&0x00FF);
+        }
+        void set_high_byte(uint8_t value)
+        {
+            high_byte = value;
+            combined_register = (high_byte<<8) | (low_byte);
+        }
+        void set_low_byte(uint8_t value)
+        {
+            low_byte = value;
+            combined_register = (high_byte<<8) | (low_byte);
+        }
 };
+
+Register AF,BC,DE,HL,SP;
 
 void emulate_one_cycle();   //used to emulate one CPU cycle
 CPU();                      //constructor used to initialize an object of the CPU class
@@ -58,10 +93,25 @@ CPU();                      //constructor used to initialize an object of the CP
 void reset();               //used to reset the CPU if needed 
 //dummy memory array, will replace later
 array<uint8_t,0xFFFF> memory;
-
     private:
         bool CPU_running;   //meant to be used by the special commands like STOP and HALT
         unsigned int cycles;     //count the number of cycles the CPU has run for
         uint8_t read(uint8_t address);    //meant to read memory and other peripherals on the bus
         void write(uint8_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
+        uint16_t opcode;
+        // OPCODE instructions
+        void NOP(int num_cycles);
+        
+        //8-bit loads
+        void LD_n_A(Register reg, int num_cycles, bool combined, bool msb);  //put value of A into n (A,B,C,D,E,H,L,BC,DE,HL, or a two byte immediate value)
+
+        //8-bit ALU
+        void INC_n(Register reg, int num_cycles, bool combined, bool msb);   //increment nn (BC,DE,HL,SP)
+
+        //16-bit loads
+        void LD_n_nn(Register reg, int num_cycles); //put immediate value nn into register n (BC,DE,HL,SP)
+
+        //16-bit arithmetic
+        void INC_nn(Register reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
 };
+
