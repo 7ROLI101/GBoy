@@ -3,4 +3,8 @@ This was a project that I wanted to do for a long time now, and I decided that n
 
 
 ### Here are some resources that I would be using while I work on this project:
+
+* https://gbdev.io/pandocs/
+* https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
+
     
