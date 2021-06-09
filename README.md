@@ -5,10 +5,11 @@ This was a project that I wanted to do for a long time now. I decided that now w
 
 I am going to try and break it down into modules.
 
-- GBoy
-  - CPU
-  - Memory
+- GBoy (this is going to be an accumulation of all the individual parts that I am making)
+  - CPU (implements the opcodes)
+  - Memory (implements how memory is stored in the GameBoy)
 
+I still need to understand what else I need to make, but for now I am working on adding in the opcodes that I am going to use for the GameBoy.
 ### Here are some resources that I would be using while I work on this project:
 
 * https://gbdev.io/pandocs/
