@@ -5,7 +5,7 @@ This was a project that I wanted to do for a long time now. I decided that now w
 
 I am going to try and break it down into modules.
 
--  GBoy
+-  GBoy:
   - CPU
   - Memory
 
