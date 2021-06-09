@@ -96,15 +96,15 @@ array<uint8_t,0xFFFF> memory;
     private:
         bool CPU_running;   //meant to be used by the special commands like STOP and HALT
         unsigned int cycles;     //count the number of cycles the CPU has run for
-        uint8_t read(uint8_t address);    //meant to read memory and other peripherals on the bus
-        void write(uint8_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
+        uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus
+        void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
         uint16_t opcode;
         // OPCODE instructions
         void NOP(int num_cycles);
         
         //8-bit loads
         void LD_n_A(Register reg, int num_cycles, bool combined, bool msb);  //put value of A into n (A,B,C,D,E,H,L,BC,DE,HL, or a two byte immediate value)
-
+        void LD_r1_r2(Register src, Register dest, int num_cycles, bool src_comb, bool src_msb, bool dest_comb, bool dest_msb);    //put value of r1 into r2 (A,B,C,D,E,H,L,HL)
         //8-bit ALU
         void INC_n(Register reg, int num_cycles, bool combined, bool msb);   //increment nn (BC,DE,HL,SP)
 
