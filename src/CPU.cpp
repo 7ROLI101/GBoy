@@ -9,12 +9,13 @@ CPU::CPU()
     */ 
     cycles = 0;     //setting the number of cycles to 0
     PC = 0x0100;    //at start-up, program counter is set to 0x0100 in ROM 
-    SP = 0xFFFE;    //at start-up, the program counter is set to 0xFFFE in ROM
+    SP.set_register_combined(0xFFFE);    //at start-up, the program counter is set to 0xFFFE in ROM
     //now setting the values of the internal CPU registers (for the original GameBoy)
-    AF = 0x01B0;
-    BC = 0x0013;
-    DE = 0x00D8;
-    HL = 0x014D;
+    AF.set_register_combined(0x01B0);
+    BC.set_register_combined(0x0013);
+    DE.set_register_combined(0x00D8);
+    HL.set_register_combined(0x014D);
+   
     // write out all of the values for the memory locations specified when powering up
     write(0xFF05,0x00); write(0xFF06,0x00); write(0xFF07,0x00); write(0xFF10,0x80); write(0xFF11,0xBF); write(0xFF12,0xF3);
     write(0xFF14,0xBF); write(0xFF16,0x3F); write(0xFF17,0x00); write(0xFF19,0xBF); write(0xFF1A,0x7F); write(0xFF1B,0xFF);
@@ -24,12 +25,12 @@ CPU::CPU()
     write(0xFFFF,0x00);
 }
 
-void CPU::write(uint8_t address, uint8_t value)
+void CPU::write(uint16_t address, uint8_t value)
 {
     memory[address] = value;
 }
 
-uint8_t CPU::read(uint8_t address)
+uint8_t CPU::read(uint16_t address)
 {
     return memory[address];
 }
@@ -46,7 +47,7 @@ void CPU::reset()
     BC.set_register_combined(0x0013);
     DE.set_register_combined(0x00D8);
     HL.set_register_combined(0x014D);
-    
+
     // write out all of the values for the memory locations specified when powering up
     write(0xFF05,0x00); write(0xFF06,0x00); write(0xFF07,0x00); write(0xFF10,0x80); write(0xFF11,0xBF); write(0xFF12,0xF3);
     write(0xFF14,0xBF); write(0xFF16,0x3F); write(0xFF17,0x00); write(0xFF19,0xBF); write(0xFF1A,0x7F); write(0xFF1B,0xFF);
@@ -179,16 +180,75 @@ void CPU::emulate_one_cycle()
             break;
         }
 
-        case 0x34:  //INC (increment) the value of HL
+        case 0x34:  //INC (increment) the value of the address in HL
         {
             //increment number of cycles by 12
             INC_n(HL,12,true,false);
+            break;
         }
 
+        case 0x36:  //LOAD the value of n into the address in HL
+        {
+            //increment number of cycles by 12
+            //this won't do anything to AF, and no need to pass anything 
+            //inisde of the rest of the parameters since 0x36 is a special case
+            LD_r1_r2(AF, HL, 12, false, false, false, false);
+            break;
+        }
+        
         case 0x3C:  //INC (increment) the value of A
         {
             //increment number of cycles by 4
             INC_n(AF,4,false,true);
+            break;
+        }
+
+        case 0x40:  //LOAD the value of register B into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, BC, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x41:  //LOAD the value of register C into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, BC, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x42:  //LOAD the value of register D into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, BC, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x43:  //LOAD the value of register E into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, BC, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x44:  //LOAD the value of register H into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, BC, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x45:  //LOAD the value of register L into register B
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, BC, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x46:  //LOAD the value of the address pointed to by HL into register B
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, BC, 8, true, false, false, true);
             break;
         }
 
@@ -199,10 +259,108 @@ void CPU::emulate_one_cycle()
             break;
         }
 
+        case 0x48:  //LOAD the value of register B into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, BC, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x49:  //LOAD the value of register C into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, BC, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x4A:  //LOAD the value of register D into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, BC, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x4B:  //LOAD the value of register E into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, BC, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x4C:  //LOAD the value of register H into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, BC, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x4D:  //LOAD the value of register L into register C
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, BC, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x4E:  //LOAD the value of the address pointed to by HL into register C
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, BC, 8, true, false, false, false);
+            break;
+        }
+
         case 0x4F:  //LOAD value of A onto C
         {
             //increment number of cycles by 4
             LD_n_A(BC,4,false,false); 
+            break;
+        }
+
+        case 0x50:  //LOAD the value of register B into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, DE, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x51:  //LOAD the value of register C into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, DE, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x52:  //LOAD the value of register D into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, DE, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x53:  //LOAD the value of register E into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, DE, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x54:  //LOAD the value of register H into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, DE, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x55:  //LOAD the value of register L into register D
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, DE, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x56:  //LOAD the value of the address pointed to by HL into register D
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, DE, 8, true, false, false, true);
             break;
         }
 
@@ -213,17 +371,164 @@ void CPU::emulate_one_cycle()
             break;
         }
 
+        case 0x58:  //LOAD the value of register B into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, DE, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x59:  //LOAD the value of register C into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, DE, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x5A:  //LOAD the value of register D into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, DE, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x5B:  //LOAD the value of register E into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, DE, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x5C:  //LOAD the value of register H into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, DE, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x5D:  //LOAD the value of register L into register E
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, DE, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x5E:  //LOAD the value of the address pointed to by HL into register E
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, DE, 8, true, false, false, false);
+            break;
+        }
+
         case 0x5F:  //LOAD value of A onto E
         {
             //increment number of cycles by 4
             LD_n_A(DE,4,false,false); 
             break;
         }
-        
+
+        case 0x60:  //LOAD the value of register B into register H
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x61:  //LOAD the value of register C into register H
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x62:  //LOAD the value of register D into register H
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x63:  //LOAD the value of register E into register H
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x64:  //LOAD the value of register H into register H
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x65:  //LOAD the value of register L into registerH
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x66:  //LOAD the value of the address pointed to by HL into register D
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, HL, 8, true, false, false, true);
+            break;
+        }
+
         case 0x67:  //LOAD value of A onto H
         {
             //increment number of cycles by 4
             LD_n_A(HL,4,false,true); 
+            break;
+        }
+
+        case 0x68:  //LOAD the value of register B into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x69:  //LOAD the value of register C into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x6A:  //LOAD the value of register D into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x6B:  //LOAD the value of register E into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x6C:  //LOAD the value of register H into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, true, false, false);
+            break;
+        }
+
+        case 0x6D:  //LOAD the value of register L into register L
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, false, false, false);
+            break;
+        }
+
+        case 0x6E:  //LOAD the value of the address pointed to by HL into register L
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, HL, 8, true, false, false, false);
             break;
         }
 
@@ -234,10 +539,101 @@ void CPU::emulate_one_cycle()
             break;
         }
 
+        case 0x70:  //LOAD the value of register B into the address pointed to by HL
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, true, true, false);
+            break;
+        }
+
+        case 0x71:  //LOAD the value of register C into the address pointed to by HL
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, HL, 4, false, false, true, false);
+            break;
+        }
+
+        case 0x72:  //LOAD the value of register D into the address pointed to by HL
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, true, true, false);
+            break;
+        }
+
+        case 0x73:  //LOAD the value of register E into the address pointed to by HL
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, HL, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x74:  //LOAD the value of register H into the address pointed to by HL
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, true, true, false);
+            break;
+        }
+
+        case 0x75:  //LOAD the value of register L into the address pointed to by HL
+        {    
+            //increment number of cycles by 4
+            LD_r1_r2(HL, HL, 4, false, false, true, false);
+            break;
+        }
+
         case 0x77:  //LOAD value of A onto HL
         {
             //increment number of cycles by 8
             LD_n_A(HL,8,true,false);
+            break;
+        }
+
+        case 0x78:  //LOAD the value of register B into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, AF, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x79:  //LOAD the value of register C into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(BC, AF, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x7A:  //LOAD the value of register D into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, AF, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x7B:  //LOAD the value of register E into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(DE, AF, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x7C:  //LOAD the value of register H into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, AF, 4, false, true, false, true);
+            break;
+        }
+
+        case 0x7D:  //LOAD the value of register L into register A
+        {
+            //increment number of cycles by 4
+            LD_r1_r2(HL, AF, 4, false, false, false, true);
+            break;
+        }
+
+        case 0x7E:  //LOAD the value of the address pointed to by HL into register A
+        {
+            //increment number of cycles by 8
+            LD_r1_r2(HL, HL, 8, true, false, false, true);
             break;
         }
 
@@ -262,7 +658,6 @@ void CPU::emulate_one_cycle()
 void CPU::NOP(int num_cycles)
 {
     //only uses one byte, which is the opcode byte
-
     cycles = cycles + num_cycles;
     PC = PC + 1;
 }
@@ -275,34 +670,88 @@ void CPU::LD_n_A(Register reg, int num_cycles, bool combined, bool msb)
     if (opcode==0xEA)
     {
         //uses 16 bits, so get the 16 bit data
-        uint16_t data = ((PC+2)<<8)|((PC+1));
+        uint8_t temp_msb = read(PC+2);
+        uint8_t temp_lsb = read(PC+1);
+        uint16_t data = (temp_msb<<8)|(temp_lsb);
         PC = PC + 3;
         //now load A to to the address in memory
         write(data, AF.high_byte);
-        return;
     }
-    PC = PC + 1;
-    //check to see if you are combining using a combination of registers
-    if(combined == true)
-    {
-        //now load A to the register
-        reg.set_register_combined(AF.high_byte);
-    }
-    //if you are not, check to see if you are using the MSB or LSB of the register
     else
     {
-        if(msb == true)
+        PC = PC + 1;
+        //check to see if you are combining using a combination of registers
+        if(combined == true)
         {
-            //now load A to the most significant byte
-            reg.set_high_byte(AF.high_byte);    
+            //now load A to the address given by the value in the register
+            write(reg.combined_register, AF.high_byte);
         }
+        //if you are not, check to see if you are using the MSB or LSB of the register
         else
         {
-            //now load A to the least significant byte
-            reg.set_low_byte(AF.high_byte);
+            if(msb == true)
+            {
+                //now load A to the most significant byte
+                reg.set_high_byte(AF.high_byte);    
+            }
+            else
+            {
+                //now load A to the least significant byte
+                reg.set_low_byte(AF.high_byte);
+            }
         }
     }
     //increment number of cycles
+    cycles = cycles + num_cycles; 
+}
+//8 bit load opcodes (0x7F, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 
+//0x7E, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x48, 0x49, 0x4A
+//0x4B, 0x4C, 0x4D, 0x4E, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56
+//0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D, 0x5E, 0x60, 0x61, 0x62, 0x63,
+//0x64, 0x65, 0x66, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x70,
+//0x71, 0x72, 0x73, 0x74, 0x75, 0x36)
+void CPU::LD_r1_r2(Register src, Register dest, int num_cycles, bool src_comb, bool src_msb, bool dest_comb, bool dest_msb)    //put value r2 into r1 (A,B,C,D,E,H,L,HL)
+{
+    if(opcode == 0x36)
+    {
+        uint8_t data = read(PC+1);
+        PC = PC + 2;
+        //load the value of n into the address pointed to by HL
+        write(dest.combined_register,data);
+    }
+    else
+    {
+        PC = PC + 1;
+        //check to see if the source register is a pointer using HL
+        if(src_comb == true)
+        {
+            //check to see if the destination msb was passed
+            if(dest_msb == true)
+            {
+                dest.set_high_byte(read(src.combined_register));
+            }
+            //this is if the destination lsb was passed
+            else
+            {
+                dest.set_low_byte(read(src.combined_register));
+            }
+        }
+        //check to see if destination register is a pointer using HL
+        else if(dest_comb == true)
+        {
+            //check to see if the source msb was passed
+            if(src_msb == true)
+            {
+                write(dest.combined_register,src.high_byte);
+            }
+            //this is if the source lsb was passed
+            else
+            {
+                write(dest.combined_register,src.low_byte);
+            }   
+        }
+    }
+    //increment number of cycles 
     cycles = cycles + num_cycles; 
 }
 
@@ -316,13 +765,12 @@ void CPU::INC_n(Register reg, int num_cycles, bool combined, bool msb)
     AF.set_low_byte(AF.low_byte & CLR_SUBTRACTION_FLAG);
 
     //increment the register
-    //check to see if we are using a combined register
+    //check to see if we are using a pointer (HL)
     if(combined == true)
     {
-        reg.set_register_combined(reg.combined_register+1);
-        
-        //check to see if the result of the register after incrementing is zero
-        if((reg.combined_register)==0)
+        write(reg.combined_register, reg.combined_register+1);
+        //check to see if the result after incrementing is zero
+        if((read(reg.combined_register))==0)
         {
             //set the Z flag
             AF.set_low_byte(AF.low_byte|SET_ZERO_FLAG);
@@ -334,7 +782,7 @@ void CPU::INC_n(Register reg, int num_cycles, bool combined, bool msb)
         }
 
         //check to see if the result produces a half carry after incrementing
-        if(reg.combined_register==0x0010)
+        if(read(reg.combined_register)==0x0010)
         {
             //set the H flag
             reg.set_low_byte(AF.low_byte|SET_HALF_CARRY_FLAG);
@@ -404,7 +852,6 @@ void CPU::INC_n(Register reg, int num_cycles, bool combined, bool msb)
             }        
         }
     }
-
     //increment number of cycles 
     cycles = cycles + num_cycles; 
 }
@@ -414,7 +861,9 @@ void CPU::INC_n(Register reg, int num_cycles, bool combined, bool msb)
 void CPU::LD_n_nn(Register reg, int num_cycles)
 {
     //uses 16 bits, so get the 16 bit data
-    uint16_t data = ((PC+2)<<8)|((PC+1));
+    uint8_t temp_msb = read(PC+2);
+    uint8_t temp_lsb = read(PC+1);
+    uint16_t data = (temp_msb<<8)|(temp_lsb);
     PC = PC + 3;
     //now load data to the register
     reg.set_register_combined(data);
@@ -422,6 +871,7 @@ void CPU::LD_n_nn(Register reg, int num_cycles)
 }     
 
 //16 BIT ARITHMETIC
+//16 bit increment (0x03, 0x13, 0x23, 0x33)
 void CPU::INC_nn(Register reg, int num_cycles)
 {
     PC = PC + 1;
