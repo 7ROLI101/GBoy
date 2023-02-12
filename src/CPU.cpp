@@ -30,6 +30,11 @@ void CPU::write(uint16_t address, uint8_t value)
     memory[address] = value;
 }
 
+void CPU::write_2bytes(uint16_t address, uint16_t value)
+{
+    memory[address] = value;
+}
+
 uint8_t CPU::read(uint16_t address)
 {
     return memory[address];
@@ -100,11 +105,30 @@ void CPU::emulate_one_cycle()
             INC_n(BC,4,false,true);
             break;
         }
+        case 0x05:  //DEC (decrement) the value of B
+        {
+            //decrement number of cycles by 4
+            DEC_n(BC,4,false,true);
+            break;
+        }
+        
+        case 0x08:  //LOAD value of SP to address pointed to by 2-byte value
+        {
+            //increment number of cycles by 20
+            LD_n_nn(SP, 20, true);
+            break;
+        }
 
         case 0x0C:  //INC (increment) the value of C
         {
             //increment number of cycles by 4
             INC_n(BC,4,false,false);
+        }
+        case 0x0D:  //DEC (decrement) the value of C
+        {
+            //decrement number of cycles by 4
+            DEC_n(BC,4,false,false);
+            break;
         }
 
         case 0x11:  //LOAD 16-bit data onto DE
@@ -134,10 +158,24 @@ void CPU::emulate_one_cycle()
             INC_n(DE,4,false,true);
         }
 
+        case 0x15:  //DEC (decrement) the value of D
+        {
+            //decrement number of cycles by 4
+            DEC_n(DE,4,false,true);
+            break;
+        }
+
         case 0x1C:  //INC (increment) the value of E
         {
             //increment number of cycles by 4
             INC_n(DE,4,false,false);
+        }
+
+        case 0x1D:  //DEC (decrement) the value of E
+        {
+            //decrement number of cycles by 4
+            DEC_n(DE,4,false,false);
+            break;
         }
 
         case 0x21:  //LOAD 16-bit data onto HL
@@ -159,11 +197,24 @@ void CPU::emulate_one_cycle()
             //increment number of cycles by 4
             INC_n(HL,4,false,true);
         }
+        case 0x25:  //DEC (decrement) the value of H
+        {
+            //decrement number of cycles by 4
+            DEC_n(HL,4,false,true);
+            break;
+        }
 
         case 0x2C:  //INC (increment) the value of L
         {
             //increment number of cycles by 4
             INC_n(HL,4,false,false);
+        }
+
+        case 0x2D:  //DEC (decrement) the value of L
+        {
+            //decrement number of cycles by 4
+            DEC_n(HL,4,false,false);
+            break;
         }
 
         case 0x31:  //LOAD 16-bit data onto SP
@@ -187,6 +238,13 @@ void CPU::emulate_one_cycle()
             break;
         }
 
+        case 0x35:  //DEC (decrement) the value of the address in HL
+        {
+            //decrement number of cycles by 4
+            DEC_n(HL,12,true,false);
+            break;
+        }
+
         case 0x36:  //LOAD the value of n into the address in HL
         {
             //increment number of cycles by 12
@@ -200,6 +258,13 @@ void CPU::emulate_one_cycle()
         {
             //increment number of cycles by 4
             INC_n(AF,4,false,true);
+            break;
+        }
+
+        case 0x3D:  //DEC (decrement) the value of A
+        {
+            //decrement number of cycles by 4
+            DEC_n(AF,4,false,true);
             break;
         }
 
@@ -581,6 +646,12 @@ void CPU::emulate_one_cycle()
             break;
         }
 
+        case 0x76:  // HALTs the processor operation until an interrupt occurs
+        {
+            //stop CPU operation until interrupt occurs
+            HALT(4);
+            break;
+        }
         case 0x77:  //LOAD value of A onto HL
         {
             //increment number of cycles by 8
@@ -856,9 +927,110 @@ void CPU::INC_n(Register reg, int num_cycles, bool combined, bool msb)
     cycles = cycles + num_cycles; 
 }
 
+
+//Decrement opcode()
+void CPU::DEC_n(Register reg, int num_cycles, bool combined, bool msb)
+{
+    PC = PC + 1;
+    //reset the N flag
+    AF.set_low_byte(AF.low_byte & SET_SUBTRACTION_FLAG);
+
+    //decrement the register
+    //check to see if we are using a pointer (HL)
+    if(combined == true)
+    {
+        write(reg.combined_register, reg.combined_register-1);
+        //check to see if the result after decrementing is zero
+        if((read(reg.combined_register))==0)
+        {
+            //set the Z flag
+            AF.set_low_byte(AF.low_byte|SET_ZERO_FLAG);
+        }
+        //if it isn't 0, then clear the Z flag
+        else
+        {
+            AF.set_low_byte(AF.low_byte&CLR_ZERO_FLAG); 
+        }
+
+        //check to see if the result produces a half carry after decrementing
+        if(read(reg.combined_register)==0x0010)
+        {
+            //set the H flag
+            reg.set_low_byte(AF.low_byte|SET_HALF_CARRY_FLAG);
+        }
+        //if it doesn't produce a half carry, clear the half carry flag
+        else
+        {
+            reg.set_low_byte(AF.low_byte|CLR_HALF_CARRY_FLAG);
+        }        
+    }
+    //if not, just decrement the register
+    else
+    {
+        if(msb==true)    
+        {
+            reg.set_high_byte(reg.high_byte-1);
+            
+            //check to see if the result of the register after decrementing is zero
+            if((reg.high_byte)==0)
+            {
+                //set the Z flag
+                AF.set_low_byte(AF.low_byte|SET_ZERO_FLAG);
+            }
+            //if it isn't 0, then clear the Z flag
+            else
+            {
+                AF.set_low_byte(AF.low_byte&CLR_ZERO_FLAG); 
+            }
+
+            //check to see if the result produces a half carry after decrementing
+            if(reg.high_byte==0x10)
+            {
+                //set the H flag
+                reg.set_low_byte(AF.low_byte|SET_HALF_CARRY_FLAG);
+            }
+            //if it doesn't produce a half carry, clear the half carry flag
+            else
+            {
+                reg.set_low_byte(AF.low_byte|CLR_HALF_CARRY_FLAG);
+            }          
+        }
+        else
+        {
+            reg.set_low_byte(reg.low_byte-1);
+            //check to see if the result of the register after decrementing is zero
+            if((reg.low_byte)==0)
+            {
+                //set the Z flag
+                AF.set_low_byte(AF.low_byte|SET_ZERO_FLAG);
+            }
+            //if it isn't 0, then clear the Z flag
+            else
+            {
+                AF.set_low_byte(AF.low_byte&CLR_ZERO_FLAG); 
+            }
+
+            //check to see if the result produces a half carry after decrementing
+            if(reg.low_byte==0x0010)
+            {
+                //set the H flag
+                reg.set_low_byte(AF.low_byte|SET_HALF_CARRY_FLAG);
+            }
+            //if it doesn't produce a half carry, clear the half carry flag
+            else
+            {
+                reg.set_low_byte(AF.low_byte|CLR_HALF_CARRY_FLAG);
+            }        
+        }
+    }
+    //increment number of cycles 
+    cycles = cycles + num_cycles; 
+}
+
+
 //16 BIT LOADS
-//16 bit load opcode (0x01, 0x11, 0x21, 0x31)
-void CPU::LD_n_nn(Register reg, int num_cycles)
+//16 bit load opcode (0x01, 0x08, 0x11, 0x21, 0x31)
+void CPU::LD_n_nn(Register reg, int num_cycles, bool pointer=false)
 {
     //uses 16 bits, so get the 16 bit data
     uint8_t temp_msb = read(PC+2);
@@ -866,7 +1038,14 @@ void CPU::LD_n_nn(Register reg, int num_cycles)
     uint16_t data = (temp_msb<<8)|(temp_lsb);
     PC = PC + 3;
     //now load data to the register
-    reg.set_register_combined(data);
+    if (pointer == true)
+    {
+        write_2bytes(data,read(reg.combined_register));
+    }
+    else
+    {
+        reg.set_register_combined(data);
+    }
     cycles = cycles + num_cycles;
 }     
 
@@ -876,7 +1055,14 @@ void CPU::INC_nn(Register reg, int num_cycles)
 {
     PC = PC + 1;
     //increment reg
-    reg .set_register_combined(reg.combined_register+1);
+    reg.set_register_combined(reg.combined_register+1);
     //increment number of cycles
     cycles = cycles + num_cycles;   
+}
+
+void CPU::HALT(int num_cycles)
+{
+    // halt CPU operation
+    STOP_CPU =  true;
+    NOP(num_cycles);
 }

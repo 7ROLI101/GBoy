@@ -60,6 +60,9 @@ Bit 4 of the F register -> C, or the Carry Flag
 
 uint16_t SP, PC;
 uint8_t A,B,C,D,E,F,H,L;
+bool STOP_CPU=false; //flag used by HALT to say whether the CPU is operating or not
+
+
 class Register
 {
     public:
@@ -96,20 +99,24 @@ array<uint8_t,0xFFFF> memory;
     private:
         bool CPU_running;   //meant to be used by the special commands like STOP and HALT
         unsigned int cycles;     //count the number of cycles the CPU has run for
-        uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus
-        void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus
+        uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus (1 byte)        
+        void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus (1 byte)
+        void write_2bytes(uint16_t address, uint16_t value);   //meant to write to memory and other peripherals on the bus (2 bytes)
+        
         uint16_t opcode;
         // OPCODE instructions
         void NOP(int num_cycles);
+        void HALT(int num_cycles);
         
         //8-bit loads
         void LD_n_A(Register reg, int num_cycles, bool combined, bool msb);  //put value of A into n (A,B,C,D,E,H,L,BC,DE,HL, or a two byte immediate value)
         void LD_r1_r2(Register src, Register dest, int num_cycles, bool src_comb, bool src_msb, bool dest_comb, bool dest_msb);    //put value of r1 into r2 (A,B,C,D,E,H,L,HL)
         //8-bit ALU
-        void INC_n(Register reg, int num_cycles, bool combined, bool msb);   //increment nn (BC,DE,HL,SP)
+        void INC_n(Register reg, int num_cycles, bool combined, bool msb);   //increment n 
+        void DEC_n(Register reg, int num_cycles, bool combined, bool msb);   //decrement n 
 
         //16-bit loads
-        void LD_n_nn(Register reg, int num_cycles); //put immediate value nn into register n (BC,DE,HL,SP)
+        void LD_n_nn(Register reg, int num_cycles, bool pointer); //put immediate value nn into register n (BC,DE,HL,SP)
 
         //16-bit arithmetic
         void INC_nn(Register reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
