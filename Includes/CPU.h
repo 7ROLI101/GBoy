@@ -58,37 +58,73 @@ Bit 4 of the F register -> C, or the Carry Flag
 -> The other registers are general purpose register used to store data.
 */
 
-uint16_t SP, PC;
-uint8_t A,B,C,D,E,F,H,L;
-bool STOP_CPU=false; //flag used by HALT to say whether the CPU is operating or not
 
+bool STOP_CPU=false; //flag used by HALT to say whether the CPU is operating or not
 
 class Register
 {
     public:
-        uint16_t combined_register;
-        uint8_t high_byte;
-        uint8_t low_byte;
+        uint8_t data;
+    uint8_t GetRegisterValue()
+    {
+        return data;
+    }
+    void SetRegisterValue(uint8_t value)
+    {
+        data = value;
+    }
+};
 
-        void set_register_combined(uint16_t value)
+class CombinedRegister
+{
+    public:
+        uint16_t data;
+        Register* HighRegister;
+        Register* LowRegister;
+        CombinedRegister(Register high_reg, Register low_reg)
         {
-            combined_register = value;
-            high_byte = (value&0xFF00)>>8;
-            low_byte = (value&0x00FF);
+            data = 0x0000;
+            this->HighRegister = &high_reg;
+            HighRegister->SetRegisterValue(0x00);
+            this->LowRegister = &low_reg;
+            LowRegister->SetRegisterValue(0x00);
         }
-        void set_high_byte(uint8_t value)
+        void SetRegisterValue(uint16_t value)
         {
-            high_byte = value;
-            combined_register = (high_byte<<8) | (low_byte);
+            data = value;
+            uint8_t high_byte = (data&0xFF00)>>8;
+            uint8_t low_byte = (value&0x00FF);
+            this->HighRegister->SetRegisterValue(high_byte);
+            this->LowRegister->SetRegisterValue(low_byte);
         }
-        void set_low_byte(uint8_t value)
+        uint16_t GetRegisterValue()
         {
-            low_byte = value;
-            combined_register = (high_byte<<8) | (low_byte);
+            return data;
         }
 };
 
-Register AF,BC,DE,HL,SP;
+class SpecialRegister
+{
+    public:
+    uint16_t data;
+    uint16_t GetRegisterValue()
+    {
+        return data;
+    }
+    void SetRegisterValue(uint16_t value)
+    {
+        data = value;
+    }
+};
+
+//SET UP ALL THE REGISTERS
+Register A,B,C,D,E,F,H,L;
+CombinedRegister AF = CombinedRegister(A,F);
+CombinedRegister BC = CombinedRegister(B,C);
+CombinedRegister DE = CombinedRegister(D,E);
+CombinedRegister HL = CombinedRegister(H,L);
+SpecialRegister SP, PC;
+
 
 void emulate_one_cycle();   //used to emulate one CPU cycle
 CPU();                      //constructor used to initialize an object of the CPU class
@@ -109,16 +145,23 @@ array<uint8_t,0xFFFF> memory;
         void HALT(int num_cycles);
         
         //8-bit loads
-        void LD_n_A(Register reg, int num_cycles, bool combined, bool msb);  //put value of A into n (A,B,C,D,E,H,L,BC,DE,HL, or a two byte immediate value)
-        void LD_r1_r2(Register src, Register dest, int num_cycles, bool src_comb, bool src_msb, bool dest_comb, bool dest_msb);    //put value of r1 into r2 (A,B,C,D,E,H,L,HL)
+        void LD_n_A(CombinedRegister reg, int num_cycles, bool combined, bool msb);  //put value of A into n (A,B,C,D,E,H,L,BC,DE,HL, or a two byte immediate value)
+        void LD_r1_r2(CombinedRegister src, CombinedRegister dest, int num_cycles, bool src_comb, bool src_msb, bool dest_comb, bool dest_msb);    //put value of r1 into r2 (A,B,C,D,E,H,L,HL)
+        void LD_nn_n(Register dest, int num_cycles); //put value of n into nn (n is 1 byte of data, and nn is B,C,D,E,H,L)
+        void LDI_LDD_A_HL_HL_A(CombinedRegister src, CombinedRegister dest,int num_cycles, bool dest_combined,bool increment ); // increment/decrement HL before/after storing/retrieving from A
         //8-bit ALU
-        void INC_n(Register reg, int num_cycles, bool combined, bool msb);   //increment n 
-        void DEC_n(Register reg, int num_cycles, bool combined, bool msb);   //decrement n 
+        void INC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb);   //increment n 
+        void DEC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb);   //decrement n 
 
         //16-bit loads
-        void LD_n_nn(Register reg, int num_cycles, bool pointer); //put immediate value nn into register n (BC,DE,HL,SP)
+        template<class t>
+        void LD_n_nn(t reg, int num_cycles); //put immediate value nn into register n (BC,DE,HL,SP)
+        void LD_n_SP(SpecialRegister reg, int num_cycles); //put immediate value of SP into address pointed to by n
 
         //16-bit arithmetic
-        void INC_nn(Register reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
+        template <typename t>
+        void INC_nn(t reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
+        template <typename t>
+        void DEC_nn(t reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
 };
 
