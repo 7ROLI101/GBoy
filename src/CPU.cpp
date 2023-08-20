@@ -126,6 +126,12 @@ void CPU::emulate_one_cycle()
             LD_n_SP(SP, 20);
             break;
         }
+        case 0x09:  //ADD value of BC to register HL
+        {
+            //increment number of cycles by 8
+            ADD_HL_nn(BC, 8);
+            break;
+        }
         case 0x0A:  //LOAD the value of the address pointed to by BC into register A
         {
             //increment number of cycles by 8
@@ -197,7 +203,12 @@ void CPU::emulate_one_cycle()
             LD_nn_n(D,8);
             break;
         }
-
+        case 0x19:  //ADD value of DE to register HL
+        {
+            //increment number of cycles by 8
+            ADD_HL_nn(DE, 8);
+            break;
+        }
         case 0x1A:  //LOAD the value of the address pointed to by DE into register A
         {
             //increment number of cycles by 8
@@ -269,7 +280,12 @@ void CPU::emulate_one_cycle()
             LD_nn_n(H,8);
             break;
         }
-
+        case 0x29:  //ADD value of HL to register HL
+        {
+            //increment number of cycles by 8
+            ADD_HL_nn(HL, 8);
+            break;
+        }
         case 0x2A: //LDI A from HL
         {
             LDI_LDD_A_HL_HL_A(HL,AF,8,false,true);
@@ -344,7 +360,12 @@ void CPU::emulate_one_cycle()
             LD_r1_r2(AF, HL, 12, false, false, false, false);
             break;
         }
-
+        case 0x39:  //ADD value of SP to register HL
+        {
+            //increment number of cycles by 8
+            ADD_HL_nn(SP, 8);
+            break;
+        }
         case 0x3A: //LDI A from HL
         {
             LDI_LDD_A_HL_HL_A(HL,AF,8,false,false);
@@ -828,13 +849,211 @@ void CPU::emulate_one_cycle()
         }
     }
 }
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void CPU::IncrementProgramCounter(int increment_number)
+{
+    PC.SetRegisterValue(PC.GetRegisterValue()+increment_number);
+}
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 
+void CPU::SetZeroFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()|SET_ZERO_FLAG);
+}
+void CPU::ClearZeroFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()&CLR_ZERO_FLAG); 
+}
+
+template <typename t>
+void CPU::ChangeZeroFlag(t reg)
+{
+    //check to see if the result after incrementing is zero
+    if((read(reg.GetRegisterValue()))==0)
+    {
+        //set the Z flag
+        SetZeroFlag();
+    }
+    //if it isn't 0, then clear the Z flag
+    else
+    {
+        ClearZeroFlag();
+    }
+}
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+
+void CPU::SetSubtractionFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()|SET_SUBTRACTION_FLAG);
+}
+void CPU::ClearSubtractionFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()&CLR_SUBTRACTION_FLAG); 
+}
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void CPU::SetHalfCarryFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()|SET_HALF_CARRY_FLAG);
+}
+void CPU::ClearHalfCarryFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()&CLR_HALF_CARRY_FLAG); 
+}
+void CPU::ChangeHalfCarryFlag(uint8_t val1, uint8_t val2, string operation)
+{
+    if (operation == "ADD")
+    {
+        //check to see if the result produces a half carry after incrementing
+        if (((val1&0x0F) + (val2&0x0F))&0x10 == 0x10)
+        {
+            // half carry has been produced, set the half carry flag
+            SetHalfCarryFlag();
+        }  
+        else
+        {
+            ClearHalfCarryFlag();
+        }
+    }
+    else
+    {
+        //check to see if the result produces a half carry after decrementing
+        if (((val1&0x0F) - (val2&0x0F))&0x10 == 0x10)
+        {
+            // half carry has been produced, set the half carry flag
+            SetHalfCarryFlag();
+        }  
+        else
+        {
+            ClearHalfCarryFlag();
+        }
+    }
+    
+}
+
+void CPU::ChangeHalfCarryFlag(uint16_t val1, uint16_t val2, string operation)
+{
+    if (operation == "ADD")
+    {
+        //check to see if the result produces a half carry after incrementing
+        if (((val1&0x0F00) + (val2&0x0F00))&0x1000 == 0x1000)
+        {
+            // half carry has been produced, set the half carry flag
+            SetHalfCarryFlag();
+        }  
+        else
+        {
+            ClearHalfCarryFlag();
+        }
+    }
+    else
+    {
+        //check to see if the result produces a half carry after incrementing
+        if (((val1&0x0F00) - (val2&0x0F00))&0x1000 == 0x1000)
+        {
+            // half carry has been produced, set the half carry flag
+            SetHalfCarryFlag();
+        }  
+        else
+        {
+            ClearHalfCarryFlag();
+        }
+    }
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void CPU::SetCarryFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()|SET_CARRY_FLAG);
+}
+void CPU::ClearCarryFlag()
+{
+    F.SetRegisterValue(F.GetRegisterValue()&CLR_CARRY_FLAG); 
+}
+void CPU::ChangeCarryFlag(uint8_t val1, uint8_t val2, string operation)
+{
+    if (operation == "ADD")
+    {
+        //check to see if the result produces a carry after incrementing
+        if (val1+val2>0xFF)
+        {
+            // carry has been produced, set the carry flag
+            SetCarryFlag();
+        }  
+        else
+        {
+            ClearCarryFlag();
+        }
+    }
+    else
+    {
+        //check to see if the result produces a carry after decrementing
+        if (val1<val2)
+        {
+            // half carry has been produced, set the carry flag
+            SetCarryFlag();
+        }  
+        else
+        {
+            ClearCarryFlag();
+        }
+    }
+    
+}
+
+void CPU::ChangeCarryFlag(uint16_t val1, uint16_t val2, string operation)
+{
+    if (operation == "ADD")
+    {
+        //check to see if the result produces a carry after incrementing
+        if (val1+val2>0xFFFF)
+        {
+            // carry has been produced, set the carry flag
+            SetCarryFlag();
+        }  
+        else
+        {
+            ClearCarryFlag();
+        }
+    }
+    else
+    {
+        //check to see if the result produces a carry after decrementing
+        if (val1<val2)
+        {
+            // half carry has been produced, set the carry flag
+            SetCarryFlag();
+        }  
+        else
+        {
+            ClearCarryFlag();
+        }
+    }
+}
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 //delay opcode (0x00)
 void CPU::NOP(int num_cycles)
 {
     //only uses one byte, which is the opcode byte
     cycles = cycles + num_cycles;
-    PC.SetRegisterValue(PC.GetRegisterValue()+1);
+    IncrementProgramCounter(1);
 }
 
 //8 BIT LOADS
@@ -850,13 +1069,13 @@ void CPU::LD_n_A(CombinedRegister reg, int num_cycles, bool combined, bool msb)
         uint8_t temp_msb = read(PC.GetRegisterValue()+2);
         uint8_t temp_lsb = read(PC.GetRegisterValue()+1);
         uint16_t data = (temp_msb<<8)|(temp_lsb);
-        PC.SetRegisterValue(PC.GetRegisterValue() + 3);
+        IncrementProgramCounter(3);
         //now load A to to the address in memory
         write(data, A.GetRegisterValue());
     }
     else
     {
-        PC.SetRegisterValue(PC.GetRegisterValue() + 1);
+        IncrementProgramCounter(1);
         //check to see if you are combining using a combination of registers
         if(combined == true)
         {
@@ -897,13 +1116,13 @@ void CPU::LD_r1_r2(CombinedRegister src, CombinedRegister dest, int num_cycles, 
     if(opcode == 0x36)
     {
         uint8_t data = read(PC.GetRegisterValue()+1);
-        PC.SetRegisterValue(PC.GetRegisterValue()+2) ;
+        IncrementProgramCounter(2);
         //load the value of n into the address pointed to by HL
         write(dest.GetRegisterValue(),data);
     }
     else
     {
-        PC.SetRegisterValue(PC.GetRegisterValue() + 1);
+        IncrementProgramCounter(1);
         //check to see if the source register is a pointer
         if(src_comb == true)
         {
@@ -946,7 +1165,7 @@ void CPU::LD_nn_n(Register dest,int num_cycles)
     //get the 8 bit data that needs to be read in 
     uint8_t data=read(PC.GetRegisterValue()+1);
     //increment the program counter to prepare to read in the next opcode
-    PC.SetRegisterValue(PC.GetRegisterValue()+2);
+    IncrementProgramCounter(2);
     //no flags need to be changed, so move on 
     //write the data to the register sent in
     dest.SetRegisterValue(data);
@@ -958,7 +1177,7 @@ void CPU::LD_nn_n(Register dest,int num_cycles)
 // 0x32, 0x3A
 void CPU::LDI_LDD_A_HL_HL_A(CombinedRegister src, CombinedRegister dest,int num_cycles, bool dest_combined,bool increment)
 {
-    PC.SetRegisterValue(PC.GetRegisterValue()+1);
+    IncrementProgramCounter(1);
     // perform 0x22 and 0x2A operations
     if (increment==true)
     {
@@ -1012,38 +1231,23 @@ void CPU::LDI_LDD_A_HL_HL_A(CombinedRegister src, CombinedRegister dest,int num_
 
 void CPU::INC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb)
 {
-    PC.SetRegisterValue(PC.GetRegisterValue()+1);
+    IncrementProgramCounter(1);
     //reset the N flag
-    F.SetRegisterValue(F.GetRegisterValue() & CLR_SUBTRACTION_FLAG);
+    ClearSubtractionFlag();
 
     //increment the register
     //check to see if we are using a pointer (HL)
     if(combined == true)
     {
-        write(reg.GetRegisterValue(), reg.GetRegisterValue()+1);
+        uint16_t data1  = reg.GetRegisterValue();
+        uint16_t data2 = 1;
+        uint16_t result = data1+data2;
+        write(reg.GetRegisterValue(), result);
         //check to see if the result after incrementing is zero
-        if((read(reg.GetRegisterValue()))==0)
-        {
-            //set the Z flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_ZERO_FLAG);
-        }
-        //if it isn't 0, then clear the Z flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()&CLR_ZERO_FLAG); 
-        }
+        ChangeZeroFlag(reg);
 
         //check to see if the result produces a half carry after incrementing
-        if(read(reg.GetRegisterValue())==0x0010)
-        {
-            //set the H flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_HALF_CARRY_FLAG);
-        }
-        //if it doesn't produce a half carry, clear the half carry flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()|CLR_HALF_CARRY_FLAG);
-        }        
+        ChangeHalfCarryFlag(data1,data2,"ADD");
     }
     //if not, just increment the register
     else
@@ -1057,32 +1261,15 @@ void CPU::INC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb)
         {
             changed_reg = (reg.LowRegister);
         }
-            
-        changed_reg->SetRegisterValue(changed_reg->GetRegisterValue()+1);
+        uint8_t data1 = changed_reg->GetRegisterValue();
+        uint8_t data2 = 1;
+        uint8_t result = data1 + data2;
+        changed_reg->SetRegisterValue(result);
         //check to see if the result of the register after incrementing is zero
-        if((changed_reg->GetRegisterValue())==0)
-        {
-            //set the Z flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_ZERO_FLAG);
-        }
-        //if it isn't 0, then clear the Z flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()&CLR_ZERO_FLAG); 
-        }
+        ChangeZeroFlag(changed_reg);
 
         //check to see if the result produces a half carry after incrementing
-        if(changed_reg->GetRegisterValue()==0x10)
-        {
-            //set the H flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_HALF_CARRY_FLAG);
-        }
-        //if it doesn't produce a half carry, clear the half carry flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()|CLR_HALF_CARRY_FLAG);
-        }          
-        
+        ChangeHalfCarryFlag(data1,data2,"ADD");
     }
     //increment number of cycles 
     cycles = cycles + num_cycles; 
@@ -1096,38 +1283,23 @@ void CPU::INC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb)
 // 0x35, 0x3D
 void CPU::DEC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb)
 {
-    PC.SetRegisterValue(PC.GetRegisterValue() + 1);
+    IncrementProgramCounter(1);
     //reset the N flag
-    F.SetRegisterValue(F.GetRegisterValue() & SET_SUBTRACTION_FLAG);
+    SetSubtractionFlag();
 
     //decrement the register
     //check to see if we are using a pointer (HL)
     if(combined == true)
     {
-        write(reg.GetRegisterValue(), reg.GetRegisterValue()-1);
+        uint16_t data1  = reg.GetRegisterValue();
+        uint16_t data2 = 1;
+        uint16_t result = data1+data2;
+        write(reg.GetRegisterValue(), result);
         //check to see if the result after decrementing is zero
-        if((read(reg.GetRegisterValue()))==0)
-        {
-            //set the Z flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_ZERO_FLAG);
-        }
-        //if it isn't 0, then clear the Z flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()&CLR_ZERO_FLAG); 
-        }
+        ChangeZeroFlag(reg);
 
         //check to see if the result produces a half carry after decrementing
-        if(read(reg.GetRegisterValue())==0x0010)
-        {
-            //set the H flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_HALF_CARRY_FLAG);
-        }
-        //if it doesn't produce a half carry, clear the half carry flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()|CLR_HALF_CARRY_FLAG);
-        }        
+        ChangeHalfCarryFlag(data1,data2,"SUB");  
     }
     //if not, just decrement the register
     else
@@ -1141,32 +1313,16 @@ void CPU::DEC_n(CombinedRegister reg, int num_cycles, bool combined, bool msb)
         {
             changed_reg = reg.LowRegister;
         }
-        
-        changed_reg->SetRegisterValue(changed_reg->GetRegisterValue()-1);
+        uint8_t data1 = changed_reg->GetRegisterValue();
+        uint8_t data2 = 1;
+        uint8_t result = data1 + data2;
+        changed_reg->SetRegisterValue(result);
             
         //check to see if the result of the register after decrementing is zero
-        if((changed_reg->GetRegisterValue())==0)
-        {
-            //set the Z flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_ZERO_FLAG);
-        }
-        //if it isn't 0, then clear the Z flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()&CLR_ZERO_FLAG); 
-        }
+        ChangeZeroFlag(changed_reg);
 
         //check to see if the result produces a half carry after decrementing
-        if(changed_reg->GetRegisterValue()==0x10)
-        {
-            //set the H flag
-            F.SetRegisterValue(F.GetRegisterValue()|SET_HALF_CARRY_FLAG);
-        }
-        //if it doesn't produce a half carry, clear the half carry flag
-        else
-        {
-            F.SetRegisterValue(F.GetRegisterValue()|CLR_HALF_CARRY_FLAG);
-        }          
+        ChangeHalfCarryFlag(data1,data2,"SUB");      
     }
     //increment number of cycles 
     cycles = cycles + num_cycles; 
@@ -1186,7 +1342,7 @@ void CPU::LD_n_nn(t reg, int num_cycles)
     uint8_t temp_msb = read(PC.GetRegisterValue()+2);
     uint8_t temp_lsb = read(PC.GetRegisterValue()+1);
     uint16_t data = (temp_msb<<8)|(temp_lsb);
-    PC.SetRegisterValue(PC.GetRegisterValue() + 3);
+    IncrementProgramCounter(3);
     //now load data to the register
     reg.SetRegisterValue(data);
     cycles = cycles + num_cycles;
@@ -1199,7 +1355,7 @@ void CPU::LD_n_SP(SpecialRegister reg, int num_cycles)
     uint8_t temp_msb = read(PC.GetRegisterValue()+2);
     uint8_t temp_lsb = read(PC.GetRegisterValue()+1);
     uint16_t address = (temp_msb<<8)|(temp_lsb);
-    PC.SetRegisterValue(PC.GetRegisterValue() + 3);    
+    IncrementProgramCounter(3);
     //now load data to the register
     write_2bytes(address,reg.GetRegisterValue());
     reg.SetRegisterValue(address);
@@ -1215,7 +1371,7 @@ void CPU::LD_n_SP(SpecialRegister reg, int num_cycles)
 template <typename t>
 void CPU::INC_nn(t reg, int num_cycles)
 {
-    PC.SetRegisterValue(PC.GetRegisterValue()+1);
+    IncrementProgramCounter(1);
     //increment reg
     reg.SetRegisterValue(reg.GetRegisterValue()+1);
     //increment number of cycles
@@ -1230,11 +1386,35 @@ void CPU::INC_nn(t reg, int num_cycles)
 template <typename t>
 void CPU::DEC_nn(t reg, int num_cycles)
 {
-    PC.SetRegisterValue(PC.GetRegisterValue()+1);
+    IncrementProgramCounter(1);
     //decrement reg
     reg.SetRegisterValue(reg.GetRegisterValue()-1);
     //increment number of cycles
     cycles = cycles + num_cycles;   
+}
+
+
+//16 bit add to HL
+// 0x09, 
+// 0x19, 
+// 0x29, 
+// 0x39
+template <typename t>
+void CPU::ADD_HL_nn(t reg, int num_cycles)
+{
+    uint16_t data1 = HL.GetRegisterValue();
+    uint16_t data2 = reg.GetRegisterValue();
+    uint16_t result = data1 + data2;
+    HL.SetRegisterValue(result);
+    //zero flag left alone
+    //clear the N flag
+    ClearSubtractionFlag();
+    //half carry flag is set if carried from bit 11
+    //check to see if the result produces a half carry after incrementing
+    ChangeHalfCarryFlag(data1,data2,"ADD");
+
+    //carry flag is set if carried from bit 15
+    ChangeCarryFlag(data1,data2,"ADD");
 }
 
 void CPU::HALT(int num_cycles)

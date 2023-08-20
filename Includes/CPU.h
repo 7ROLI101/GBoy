@@ -2,10 +2,12 @@
 HELPFUL LINKS:
 https://gbdev.io/pandocs/
 https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html
+https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 
 */
 #include <cstdint>
 #include <array>
+#include <string>
 using namespace std;
 
 // here are the flags that are being used in the flag register
@@ -135,10 +137,27 @@ array<uint8_t,0xFFFF> memory;
     private:
         bool CPU_running;   //meant to be used by the special commands like STOP and HALT
         unsigned int cycles;     //count the number of cycles the CPU has run for
+        //Miscellaneous instructions
         uint8_t read(uint16_t address);    //meant to read memory and other peripherals on the bus (1 byte)        
         void write(uint16_t address, uint8_t value);   //meant to write to memory and other peripherals on the bus (1 byte)
         void write_2bytes(uint16_t address, uint16_t value);   //meant to write to memory and other peripherals on the bus (2 bytes)
-        
+        void IncrementProgramCounter(int increment_value);
+        void SetZeroFlag();
+        void ClearZeroFlag();
+        template <typename t>
+        void ChangeZeroFlag(t reg);
+        void SetSubtractionFlag();
+        void ClearSubtractionFlag();
+
+        void SetHalfCarryFlag();
+        void ClearHalfCarryFlag();
+        void ChangeHalfCarryFlag(uint8_t val1, uint8_t val2,string operation);
+        void ChangeHalfCarryFlag(uint16_t val1, uint16_t val2,string operation);
+
+        void SetCarryFlag();
+        void ClearCarryFlag();
+        void ChangeCarryFlag(uint8_t val1, uint8_t val2,string operation);
+        void ChangeCarryFlag(uint16_t val1, uint16_t val2,string operation);
         uint16_t opcode;
         // OPCODE instructions
         void NOP(int num_cycles);
@@ -163,5 +182,7 @@ array<uint8_t,0xFFFF> memory;
         void INC_nn(t reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
         template <typename t>
         void DEC_nn(t reg, int num_cycles);  //increment nn (BC,DE,HL,SP)
+        template <typename t>
+        void ADD_HL_nn(t reg, int num_cycles); //add nn (BC,DE,HL,SP) to HL
 };
 
